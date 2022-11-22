@@ -24,7 +24,7 @@
   const kappa = lam / (capacity * ro);
   //Значения шагов
   const tau = 0.01;
-  const h_rad = outerRadius / dots;
+  const h_rad = (outerRadius - innerRadius) / dots;
   const h_fi = (2 * Math.PI) / dots;
   const kurant = (tau * kappa) / 2;
 
@@ -34,8 +34,8 @@
   //начальные условия
   for (let k = 0; k <= dots; k++) {
     for (let i = 0; i <= dots; i++) {
-      if (i < 500) temp[k][i] = temp_upper;
-      if (i >= 500) temp[k][i] = temp_lower;
+      if (i < dots / 2) temp[k][i] = temp_upper;
+      if (i >= dots / 2) temp[k][i] = temp_lower;
     }
   }
 
@@ -46,10 +46,14 @@
     //расчет температуры по радиусу
     for (let i = 1; i <= dots - 1; i++) {
       for (let k = 1; k <= dots - 1; k++) {
-        A[k] = kurant / pow(h_rad, 2);
-        B[k] = kurant * (-2 / pow(h_rad, 2) - 1 / (rad_calc(k) * h_rad)) - 1;
-        C[k] = kurant * (1 / pow(h_rad, 2) + 1 / (rad_calc(k) * h_rad));
-        D[k] = kurant * (-temp[k][i + 1] / pow(rad_calc(k) * h_fi, 2) + temp[k][i] * (2 / (rad_calc(k) * pow(h_fi, 2)) - 1 / kurant) - temp[k][i - 1] / pow(rad_calc(k) * h_fi, 2));
+        A[k] = 1 / pow(h_rad, 2);
+        B[k] = -1.0 * (2 / pow(h_rad, 2) + 1 / (rad_calc(k) * h_rad) + 1 / kurant);
+        C[k] = 1 / pow(h_rad, 2) + 1 / (rad_calc(k) * h_rad);
+        D[k] =
+          -1.0 *
+          (temp[k][i + 1] * (1 / pow(rad_calc(k) * h_fi, 2)) +
+            temp[k][i] * (1 / kurant - 2 / pow(rad_calc(k) * h_fi, 2)) +
+            temp[k][i - 1] * (1 / pow(rad_calc(k) * h_fi, 2)));
       }
       A[0] = 0;
       B[0] = -1;
@@ -75,7 +79,7 @@
     //Проверка на поломку
     for (let i = 0; i <= dots; i++) {
       for (let k = 0; k <= dots; k++) {
-        if (typeof temp[k][i] !== 'number' || temp[k][i] > 600) {
+        if (typeof temp[k][i] !== "number" || temp[k][i] > 600) {
           throw Error(`Что то пошло не так в точке k = ${k}, i = , ${i}`);
         }
       }
@@ -84,20 +88,26 @@
     for (let k = 1; k <= dots - 1; k++) {
       const kur_fi = pow(rad_calc(k) * h_fi, 2);
       //проверить все нижестоящие формулы.  У Князевой буквы перед функцией другие
-      A[1] = 1 / kur_fi;
-      B[1] = -1.0 * (2 / kur_fi - 1 / kurant);
+      A[1] = 1.0 / kur_fi;
+      B[1] = -1.0 * (2.0 / kur_fi + 1.0 / kurant);
       C[1] = A[1];
-      D[1] = temp[k + 1][1] * (-1 / pow(h_rad, 2) + 1 / (rad_calc(k) * h_rad)) + temp[k][1] * (2 / pow(h_rad, 2) + 1 / (h_rad * rad_calc(k) - 1 / kurant)) - temp[k - 1][1] / pow(h_rad, 2);
+      D[1] =
+        temp[k + 1][1] * (-1.0 / pow(h_rad, 2) + 1.0 / (rad_calc(k) * h_rad)) +
+        temp[k][1] * (2.0 / pow(h_rad, 2.0) + 1.0 / (h_rad * rad_calc(k) - 1.0 / kurant)) -
+        temp[k - 1][1] / pow(h_rad, 2);
 
       alfa[2] = -C[1] / B[1];
       beta[2] = D[1] / B[1];
       gamma[2] = -A[1] / B[1];
 
       for (let i = 2; i <= dots; i++) {
-        A[i] = 1 / kur_fi;
-        B[i] = -1.0 * (2 / kur_fi - 1 / kurant);
+        A[i] = 1.0 / kur_fi;
+        B[i] = -1.0 * (2.0 / kur_fi + 1.0 / kurant);
         C[i] = A[i];
-        D[i] = temp[k + 1][i] * (-1 / pow(h_rad, 2) + 1 / (rad_calc(k) * h_rad)) + temp[k][i] * (2 / pow(h_rad, 2) + 1 / (h_rad * rad_calc(k) - 1 / kurant)) - temp[k - 1][i] / pow(h_rad, 2);
+        D[i] =
+          temp[k + 1][i] * (-1.0 / pow(h_rad, 2) + 1.0 / (rad_calc(k) * h_rad)) +
+          temp[k][i] * (2.0 / pow(h_rad, 2) + 1.0 / (h_rad * rad_calc(k)) - 1.0 / kurant) -
+          temp[k - 1][i] / pow(h_rad, 2);
 
         const denom = B[i] + alfa[i] * A[i];
         alfa[i + 1] = (-1.0 * C[i]) / denom;
@@ -111,13 +121,13 @@
         q[i] = alfa[i + 1] * q[i + 1] + gamma[i + 1];
       }
       //расчет поля температур
-      //тут надо поментяь
       temp[k][dots] = (p[1] * alfa[dots + 1] + beta[dots + 1]) / (1 - gamma[dots + 1] - q[1] * alfa[dots + 1]);
       temp[k][0] = temp[k][dots];
       for (let i = 1; i < dots; i++) {
-        temp[k][i] = p[i] + temp[dots] * q[i];
+        temp[k][i] = p[i] + temp[k][dots] * q[i];
+        console.log(`temp[${k}][${i}] = `, temp[k][i]);
       }
     }
   } while (time < 5);
-  console.log('temp = ', temp);
+  console.log("temp = ", temp);
 })();
