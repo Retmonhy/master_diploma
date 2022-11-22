@@ -49,11 +49,11 @@
         A[k] = kurant / pow(h_rad, 2);
         B[k] = kurant * (-2 / pow(h_rad, 2) - 1 / (rad_calc(k) * h_rad)) - 1;
         C[k] = kurant * (1 / pow(h_rad, 2) + 1 / (rad_calc(k) * h_rad));
-        D[k] = kurant * (-temp[k][i + 1] / pow(rad_calc(k) * h_rad, 2) + temp[k][i] * (2 / (rad_calc(k) * pow(h_fi, 2)) - 1 / kurant) - temp[k][i - 1] / pow(rad_calc(k) * h_fi, 2));
+        D[k] = kurant * (-temp[k][i + 1] / pow(rad_calc(k) * h_fi, 2) + temp[k][i] * (2 / (rad_calc(k) * pow(h_fi, 2)) - 1 / kurant) - temp[k][i - 1] / pow(rad_calc(k) * h_fi, 2));
       }
-      A[0] = 1;
+      A[0] = 0;
       B[0] = -1;
-      C[0] = 0;
+      C[0] = 1;
       D[0] = 0;
       A[dots] = -1;
       B[dots] = 1;
@@ -84,30 +84,25 @@
     for (let k = 1; k <= dots - 1; k++) {
       const kur_fi = pow(rad_calc(k) * h_fi, 2);
       //проверить все нижестоящие формулы.  У Князевой буквы перед функцией другие
-      A[1] = kurant / kur_fi;
-      B[1] = (-2 * kurant) / kur_fi - 1;
+      A[1] = 1 / kur_fi;
+      B[1] = -1.0 * (2 / kur_fi - 1 / kurant);
       C[1] = A[1];
-      D[1] =
-        -1.0 * temp[k + 1][1] * (kurant / pow(h_rad, 2) + 1 / (rad_calc(k) * h_rad)) +
-        temp[k][1] * (kurant * (2 / pow(h_rad, 2) + 1 / (h_rad * rad_calc(k))) - 1) -
-        temp[k - 1][1] * (kurant / pow(h_rad, 2));
+      D[1] = temp[k + 1][1] * (-1 / pow(h_rad, 2) + 1 / (rad_calc(k) * h_rad)) + temp[k][1] * (2 / pow(h_rad, 2) + 1 / (h_rad * rad_calc(k) - 1 / kurant)) - temp[k - 1][1] / pow(h_rad, 2);
 
       alfa[2] = -C[1] / B[1];
-      beta[2] = -D[1] / B[1];
+      beta[2] = D[1] / B[1];
       gamma[2] = -A[1] / B[1];
 
       for (let i = 2; i <= dots; i++) {
-        A[i] = kurant / kur_fi;
-        B[i] = (-2 * kurant) / kur_fi - 1;
+        A[i] = 1 / kur_fi;
+        B[i] = -1.0 * (2 / kur_fi - 1 / kurant);
         C[i] = A[i];
-        D[i] =
-          -1.0 * temp[k + 1][1] * (kurant / pow(h_rad, 2) + 1 / (rad_calc(k) * h_rad)) +
-          temp[k][1] * (kurant * (2 / pow(h_rad, 2) + 1 / (h_rad * rad_calc(k))) - 1) -
-          temp[k - 1][1] * (kurant / pow(h_rad, 2));
+        D[i] = temp[k + 1][i] * (-1 / pow(h_rad, 2) + 1 / (rad_calc(k) * h_rad)) + temp[k][i] * (2 / pow(h_rad, 2) + 1 / (h_rad * rad_calc(k) - 1 / kurant)) - temp[k - 1][i] / pow(h_rad, 2);
 
-        alfa[i + 1] = (-1.0 * C[i]) / (B[i] + A[i] * alfa[i]);
-        beta[i + 1] = (-1.0 * (-D[i] + A[i] * beta[i])) / (B[i] + A[i] * alfa[i]);
-        gamma[i + 1] = (-1.0 * (A[i] * gamma[i])) / (B[i] + A[i] * alfa[i]);
+        const denom = B[i] + alfa[i] * A[i];
+        alfa[i + 1] = (-1.0 * C[i]) / denom;
+        beta[i + 1] = (D[i] - A[i] * beta[i]) / denom;
+        gamma[i + 1] = (-1.0 * A[i] * gamma[i]) / denom;
       }
       p[dots - 1] = beta[dots];
       q[dots - 1] = alfa[dots] + gamma[dots];
@@ -116,20 +111,13 @@
         q[i] = alfa[i + 1] * q[i + 1] + gamma[i + 1];
       }
       //расчет поля температур
+      //тут надо поментяь
       temp[k][dots] = (p[1] * alfa[dots + 1] + beta[dots + 1]) / (1 - gamma[dots + 1] - q[1] * alfa[dots + 1]);
       temp[k][0] = temp[k][dots];
       for (let i = 1; i < dots; i++) {
-        temp[k][i] = p[i] + temp[k][dots] * q[i];
+        temp[k][i] = p[i] + temp[dots] * q[i];
       }
     }
   } while (time < 5);
   console.log('temp = ', temp);
 })();
-
-// if (Math.abs(temp[k][i]) > 5000) {
-//   return console.log(
-//     `Что-то идет не так, Числа слишком большие по модулю в точке k = ${k} и i = ${i}`,
-//     "temp = ",
-//     temp[k][i]
-//   );
-// }
