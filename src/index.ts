@@ -14,7 +14,7 @@
   let p = new Array(dots);
   let q = new Array(dots);
   //константы
-  const lam = 30;
+  const lam = 3;
   const capacity = 700;
   const ro = 7500;
   const outerRadius = 1;
@@ -32,10 +32,10 @@
   const rad_calc = (k) => innerRadius + h_rad * k;
 
   //начальные условия
-  for (let k = 0; k <= dots; k++) {
-    for (let i = 0; i <= dots; i++) {
-      if (i < dots / 2) temp[k][i] = temp_upper;
-      if (i >= dots / 2) temp[k][i] = temp_lower;
+  for (let i = 0; i <= dots; i++) {
+    for (let k = 0; k <= dots; k++) {
+      if (i <= dots / 2) temp[i][k] = temp_upper;
+      if (i > dots / 2) temp[i][k] = temp_lower;
     }
   }
 
@@ -51,9 +51,9 @@
         C[k] = 1 / pow(h_rad, 2) + 1 / (rad_calc(k) * h_rad);
         D[k] =
           -1.0 *
-          (temp[k][i + 1] * (1 / pow(rad_calc(k) * h_fi, 2)) +
-            temp[k][i] * (1 / kurant - 2 / pow(rad_calc(k) * h_fi, 2)) +
-            temp[k][i - 1] * (1 / pow(rad_calc(k) * h_fi, 2)));
+          (temp[i + 1][k] * (1 / pow(rad_calc(k) * h_fi, 2)) +
+            temp[i][k] * (1 / kurant - 2 / pow(rad_calc(k) * h_fi, 2)) +
+            temp[i - 1][k] * (1 / pow(rad_calc(k) * h_fi, 2)));
       }
       A[0] = 0;
       B[0] = -1;
@@ -71,9 +71,9 @@
         alfa[k] = -C[k] / (A[k] * alfa[k - 1] + B[k]);
         beta[k] = (D[k] - A[k] * beta[k - 1]) / (A[k] * alfa[k - 1] + B[k]);
       }
-      temp[dots][i] = (D[dots] - A[dots] * beta[dots - 1]) / (A[dots] * alfa[dots - 1] + B[dots]);
+      temp[i][dots] = (D[dots] - A[dots] * beta[dots - 1]) / (A[dots] * alfa[dots - 1] + B[dots]);
       for (let k = dots - 1; k >= 0; k--) {
-        temp[k][i] = temp[k + 1][i] * alfa[k] + beta[k];
+        temp[i][k] = temp[i][k + 1] * alfa[k] + beta[k];
       }
     }
     //Проверка на поломку
@@ -92,9 +92,9 @@
       B[1] = -1.0 * (2.0 / kur_fi + 1.0 / kurant);
       C[1] = A[1];
       D[1] =
-        temp[k + 1][1] * (-1.0 / pow(h_rad, 2) + 1.0 / (rad_calc(k) * h_rad)) +
-        temp[k][1] * (2.0 / pow(h_rad, 2.0) + 1.0 / (h_rad * rad_calc(k) - 1.0 / kurant)) -
-        temp[k - 1][1] / pow(h_rad, 2);
+        -1.0 * temp[1][k + 1] * (1.0 / pow(h_rad, 2) + 1.0 / (rad_calc(k) * h_rad)) +
+        temp[1][k] * (2.0 / pow(h_rad, 2) + 1.0 / (h_rad * rad_calc(k)) - 1.0 / kurant) -
+        temp[1][k - 1] / pow(h_rad, 2);
 
       alfa[2] = -C[1] / B[1];
       beta[2] = D[1] / B[1];
@@ -105,9 +105,9 @@
         B[i] = -1.0 * (2.0 / kur_fi + 1.0 / kurant);
         C[i] = A[i];
         D[i] =
-          temp[k + 1][i] * (-1.0 / pow(h_rad, 2) + 1.0 / (rad_calc(k) * h_rad)) +
-          temp[k][i] * (2.0 / pow(h_rad, 2) + 1.0 / (h_rad * rad_calc(k)) - 1.0 / kurant) -
-          temp[k - 1][i] / pow(h_rad, 2);
+          -1.0 * temp[i][k + 1] * (1.0 / pow(h_rad, 2) + 1.0 / (rad_calc(k) * h_rad)) +
+          temp[i][k] * (2.0 / pow(h_rad, 2) + 1.0 / (h_rad * rad_calc(k)) - 1.0 / kurant) -
+          temp[i][k - 1] / pow(h_rad, 2);
 
         const denom = B[i] + alfa[i] * A[i];
         alfa[i + 1] = (-1.0 * C[i]) / denom;
@@ -121,11 +121,15 @@
         q[i] = alfa[i + 1] * q[i + 1] + gamma[i + 1];
       }
       //расчет поля температур
-      temp[k][dots] = (p[1] * alfa[dots + 1] + beta[dots + 1]) / (1 - gamma[dots + 1] - q[1] * alfa[dots + 1]);
-      temp[k][0] = temp[k][dots];
+      temp[dots][k] = (p[1] * alfa[dots + 1] + beta[dots + 1]) / (1 - gamma[dots + 1] - q[1] * alfa[dots + 1]);
+      temp[0][k] = temp[dots][k];
       for (let i = 1; i < dots; i++) {
-        temp[k][i] = p[i] + temp[k][dots] * q[i];
-        console.log(`temp[${k}][${i}] = `, temp[k][i]);
+        temp[i][k] = p[i] + temp[dots][k] * q[i];
+        console.log(`temp[${i}][${k}] = `, temp[k][i]);
+      }
+      for (let i = 0; i <= dots; i++) {
+        temp[i][0] = temp[i][1];
+        temp[i][dots] = temp[i][dots - 1];
       }
     }
   } while (time < 5);
